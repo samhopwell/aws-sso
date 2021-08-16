@@ -2,3 +2,5 @@
 .vscode/
 
 aws-sso/__pycache__/
+
+aws_sso.egg-info/
