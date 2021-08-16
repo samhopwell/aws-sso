@@ -11,7 +11,7 @@ from dateutil import parser
 
 boto_client = boto3.client("sso")
 config_path_default = Path.joinpath(Path.home(), ".aws/config")
-cache_dir = Path.joinpath(Path.home(), ".aws/sso/cache/")
+cache_dir_default = Path.joinpath(Path.home(), ".aws/sso/cache/")
 
 
 class ProfileError(Exception):
@@ -28,7 +28,7 @@ def exec_login(sso_profile):
 
 
 def get_role_session_credentials(sso_profile, account_id, role_name):
-    access_token = __get_access_token(sso_profile)
+    access_token = get_access_token(sso_profile)
     response = boto_client.get_role_credentials(
         accessToken=access_token, accountId=account_id, roleName=role_name
     )
@@ -36,7 +36,7 @@ def get_role_session_credentials(sso_profile, account_id, role_name):
     return response["roleCredentials"]
 
 
-def __get_access_token(sso_profile):
+def get_access_token(sso_profile):
     count = 0
     while True:
         try:
@@ -53,7 +53,7 @@ def __get_access_token(sso_profile):
                 continue
 
 
-def __get_file_contents(file_path):
+def get_file_contents(file_path):
     p = Path(file_path).expanduser()
     if p.exists() and p.is_file():
         return p.read_text()
@@ -67,17 +67,18 @@ def get_account_list(access_token):
 
 
 def get_sso_access_token(cache_dir_override=None):
-    if cache_dir_override is None:
+    if cache_dir_override:
         cache_dir = cache_dir_override
+    cache_dir = cache_dir_default
     keys = {"accessToken", "expiresAt"}
-    for file in __get_json_files(cache_dir):
-        content = json.loads(__get_file_contents(file))
+    for file in get_json_files(cache_dir):
+        content = json.loads(get_file_contents(file))
         if content.keys() >= keys and is_not_expired(content["expiresAt"]):
             return content["accessToken"]
 
 
 def int_to_datetime(int_datetime):
-    return datetime.fromtimestamp(int_datetime / 1e3, tz=timezone.utc)
+    return datetime.fromtimestamp(int_datetime / 1000)
 
 
 def is_not_expired(expires_at):
@@ -85,12 +86,7 @@ def is_not_expired(expires_at):
     return expiration_date > datetime.now(timezone.utc)
 
 
-def minutes_from_now(expires_at):
-    expiration_date = parser.parse(expires_at)
-    return int((expiration_date - datetime.now(timezone.utc)).total_seconds() / 60)
-
-
-def __get_json_files(dir):
+def get_json_files(dir):
     p = Path(dir).expanduser()
     files = []
     if p.exists() and p.is_dir():
@@ -133,30 +129,15 @@ if __name__ == "__main__":
     sso_profile = arg_dict["profile"]
     account_id, role_name = get_config(sso_profile=sso_profile)
 
-    print(sso_profile)
-    print(account_id)
-    print(role_name)
-
-    exit(0)
-
     exec_login(sso_profile=sso_profile)
     role_session_credentials = get_role_session_credentials(
         sso_profile=sso_profile, account_id=account_id, role_name=role_name
     )
 
-    role_session_credentials
+    role_session_credentials["account_id"] = account_id
+    role_session_credentials["role_name"] = role_name
+    role_session_credentials["expiration"] = str(
+        int_to_datetime(role_session_credentials["expiration"])
+    )
 
     print(json.dumps(role_session_credentials))
-# return int((expiration_date - datetime.now(timezone.utc))
-#                .total_seconds() / 60)
-
-# credentials_file_path = helper.get_env_var("AWS_SHARED_CREDENTIALS_FILE", None)
-# account_id = helper.parse_role_arn(cred["role_arn"])["account_id"]
-# role_name = helper.parse_role_arn(cred["role_arn"])["role_name"]
-# expiration = helper.int_to_datetime(cred["expiration"]).isoformat()
-# x_minutes = helper.minutes_from_now(expiration)
-# print("omg")
-# print(f"Temporary credentials added to {credentials_file_path}")
-# print(f"Account: {account_id}")
-# print(f"Role:    {role_name}")
-# print(f"Expires: {expiration} ({x_minutes}m)")
