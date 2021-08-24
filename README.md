@@ -23,7 +23,7 @@ Example zshrc/bashrc configuration
 
 ```
 sso(){
-    value=`python3 aws-sso -p $1`
+    value=`python3 -m aws-sso -p $1`
     account_id=`echo $value | jq .account_id | sed -e 's/^"//' -e 's/"$//'`
     role_name=`echo $value | jq .role_name | sed -e 's/^"//' -e 's/"$//'`
     
