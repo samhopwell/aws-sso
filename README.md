@@ -24,14 +24,14 @@ Example zshrc/bashrc configuration
 ```
 sso(){
     value=`python3 -m aws-sso -p $1`
-    account_id=`echo $value | jq .account_id | sed -e 's/^"//' -e 's/"$//'`
-    role_name=`echo $value | jq .role_name | sed -e 's/^"//' -e 's/"$//'`
+    account_id=`echo $value | jq .account_id -r` 
+    role_name=`echo $value | jq .role_name -r` 
     
-    access_key_id=`echo $value | jq .accessKeyId | sed -e 's/^"//' -e 's/"$//'`
-    secret_access_key=`echo $value | jq .secretAccessKey | sed -e 's/^"//' -e 's/"$//'`
-    session_token=`echo $value | jq .sessionToken | sed -e 's/^"//' -e 's/"$//'`
+    access_key_id=`echo $value | jq .accessKeyId -r` 
+    secret_access_key=`echo $value | jq .secretAccessKey -r` 
+    session_token=`echo $value | jq .sessionToken -r` 
 
-    expiration=`echo $value | jq .expiration | sed -e 's/^"//' -e 's/"$//'`
+    expiration=`echo $value | jq .expiration -r` 
     tput setaf 2
     
     echo "Account ID: $account_id"
